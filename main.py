@@ -6,7 +6,7 @@ from PIL import Image
 import requests
 import system
 
-print(system.getmemory(3))
+print(system.printmemory(3))
 
 TOKEN = '773221186:AAF7xpKcOCmsbq6DnKG9ce5mxg21E4VcNIk'
 bot = telebot.TeleBot(TOKEN)
@@ -17,11 +17,9 @@ net.load_model(model_path)
 data_path = "Images.zip"
 database = ImageDataset(data_path)
 net.dataset = database
-dwnld = 0
-if dwnld == 1:
-    system.manage_downloading(net)
+# system.manage_downloading(net)
 
-print(system.getmemory(3))
+print(system.printmemory(3))
 
 
 @bot.message_handler(commands=['start'])
@@ -31,7 +29,7 @@ def newmes(message):
 
 @bot.message_handler(content_types=['photo'])
 def recog(message):
-    print(system.getmemory(3))
+    print(system.printmemory(3))
     url = "https://api.telegram.org/file/bot{}/{}".format(TOKEN, bot.get_file(message.photo[-1].file_id).file_path)
     temp_path = 'temp.jpg'
     with open(temp_path, 'wb') as handle:
@@ -57,7 +55,7 @@ def recog(message):
     del img
     del data
 
-    print(system.getmemory(3))
+    print(system.printmemory(3))
 
 
 bot.polling()

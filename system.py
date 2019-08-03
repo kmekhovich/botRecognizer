@@ -4,7 +4,7 @@ from urllib.parse import quote
 import requests
 
 
-def getmemory(measure):
+def printmemory(measure):
     process = psutil.Process(os.getpid())
     end = {
         0: 'b',
