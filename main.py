@@ -11,10 +11,11 @@ from urllib.parse import quote
 
 TOKEN = '773221186:AAF7xpKcOCmsbq6DnKG9ce5mxg21E4VcNIk'
 bot = telebot.TeleBot(TOKEN)
-# torch.cuda.current_device()
+torch.cuda.current_device() # DONT REMOVE. It's known torch issue fix
+                            # (https://github.com/pytorch/pytorch/issues/21114#issuecomment-508892379)
 net = Network(device="cuda:0")
 net.set_eval()
-model_path = "./model_21.pt"
+model_path = "./model_166.pt"
 net.load_model(model_path)
 data_path = "Images.zip"
 database = ImageDataset(zip_path=data_path, json_path="./breeds_ru.json")
