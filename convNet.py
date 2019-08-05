@@ -201,7 +201,7 @@ class Network:
     def answer(self, inputs, n_top):
         inputs = self.send_to_device(inputs)
         n_inputs = inputs.shape[0]
-        predicts = nn.Softmax()(self.predict(inputs))
+        predicts = nn.Softmax(1)(self.predict(inputs))
         result_s = []
         result_i = []
         for i in range(n_inputs):
