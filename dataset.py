@@ -1,91 +1,141 @@
 import torch.utils.data
 import numpy as np
 from PIL import Image
-import random
+import os
 from zipfile import ZipFile
 import json
 import torchvision
+import time
+import math
+import torchvision.transforms as TT
 
 
 class ImageDataset(torch.utils.data.Dataset):
 
-    def __init__(self, path, mode="bot", seed=228, rate=10):
-        how = 0
-        random.seed(seed)
-        if mode == "bot":
-            print("[Dataset] Starting as bot...")
-            self.breeds = json.loads(open('breeds_ru.json', "r", encoding="UTF-8").read())
-            print("[Dataset] Breeds for bot have been loaded successfully")
+    def __init__(self, zip_path, train=False, pic_size=224, json_path="", load_first_n=99999, debug=0, aug_rate=3,
+                 seed=math.floor(time.time() % 1000)):
+        np.random.seed(seed)
+        if os.path.isfile(json_path):
+            self.class_names = json.loads(open(json_path, "r", encoding="UTF-8").read())
+            print("[Dataset] Imported json with {} class names".format(len(self.class_names)))
+        else:
+            print("[Dataset] Can't load json with class names")
+        self.seed = seed
+        self.train = [] # np.empty(shape=[0, 3, size, size])
+        self.train_answers = []
+        self.validation = []
+        self.validation_answers = []
+        self.size = 0
+        self.aug_rate = aug_rate
+        self.normalization = TT.Compose([
+            TT.Resize((pic_size, pic_size)),
+            TT.ToTensor(),
+            TT.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+        # TODO: torchvision random seed
+        self.augment = TT.Compose([
+            # torchvision.transforms.RandomCrop(size=10),
+            TT.ColorJitter(brightness=.1, hue=.1, saturation=.1),
+            TT.RandomGrayscale(),
+            TT.RandomHorizontalFlip(),
+            TT.RandomRotation(20),
+        ])
+        if not train:
             return
-        self.train = np.empty(shape=[0, 3, 224, 224])
-        self.traincorrect = np.empty(shape=[0])
-        self.validation = np.empty(shape=[0, 3, 224, 224])
-        self.validationcorrect = np.empty(shape=[0])
-        print("[Dataset] Please work perfectly")
-        with ZipFile(path) as zf:
-            print("[Dataset] Unzipping {}".format(path))
-            pictures = zf.namelist()
-            self.breeds = []
-            self.correct = []
-            breed_id = -1
-            all_images = []
-            pictures.sort()
-            for picture in pictures:
-                if picture.endswith("/"):
+        # TODO: loading in function
+        with ZipFile(zip_path) as zf:
+            if debug: print("[Dataset] Unzipping {}".format(zip_path))
+            pictures_list = zf.namelist()
+            pictures_list.sort()
+            self.classes = []
+            buffered_pics = []
+            for picture_name in pictures_list:
+                if picture_name.endswith("/"):
+                    if len(buffered_pics) > 0:
+                        self.classes.append(buffered_pics.copy())
+                    buffered_pics.clear()
+                    class_name = picture_name.split('-')[1][:-1]
+                    if debug: print(
+                        "[Dataset] Detecting new class: \"{}\" with id {}".format(class_name, len(self.classes)))
+                    if len(self.classes) >= load_first_n:
+                        break
                     continue
-                breed_name = picture.split('/')[0][10:]
-                if breed_name not in self.breeds:
-                    self.breeds.append(breed_name)
-                    breed_id += 1
+                with zf.open(picture_name) as f:
+                    buffered_pics.append(Image.open(f).copy())
+                    self.size += 1
+            if len(buffered_pics) > 0:
+                self.classes.append(buffered_pics.copy())
+        print("[Dataset] Successfully loaded data with {} classes and size {}".format(len(self.classes), self.size))
 
-                    print("[Dataset] Detecting new breed: {} with id {}".format(breed_name, breed_id))
-                with zf.open(picture) as f:
-                    img = Image.open(f)
-
-                    ###########################
-                    if random.randint(0, rate) == 0:
-                        how += 1
-                        img_a = img
-                        img_a = self.augmentation(img_a)
-                        data = np.array(img_a)
-                        data = np.moveaxis(data, [0, 1], [1, 2])
-                        all_images.append(data)
-                        self.correct.append(breed_id)
-                    ###########################
-
-                    data = np.array(img)
-                    data = np.moveaxis(data, [0, 1], [1, 2])
-                    all_images.append(data)
-                    self.correct.append(breed_id)
-        print("[Dataset] Converting to numpy...")
-        self.dataset = np.array(all_images)
-        del all_images
-        print("[Dataset] Successfully loaded data with shape {}".format(self.dataset.shape))
-        print(how)
-
-    def __getitem__(self, item):
-        return self.dataset[item]
+    def __getitem__(self, index):
+        imgs = self.train[index]
+        if str(type(index)) == "<class 'int'>":
+            imgs = [imgs]
+        return torch.stack(self.normalize(self.augmentation(imgs)))
 
     def __len__(self):
-        return len(self.dataset)
+        return self.size
 
-    def correct_name(self, index):
-        return self.breeds[self.correct[index]]
+    def get_name(self, index):
+        return self.class_names[index]
 
-    def shuffle(self, seed):
-        random.seed(seed)
+    def split(self, rate=0.7):
+        for class_num, class_ in enumerate(self.classes):
+            train_n = math.floor(rate * len(class_))
+
+            for j in range(train_n):
+                self.train.append(class_[j])
+                self.train_answers.append(class_num)
+
+            for j in range(len(class_) - train_n):
+                self.validation.append(class_[j])
+                self.validation_answers.append(class_num)
+        self.classes.clear()
+
+    def validation_to_numpy(self):
+        print("[Dataset] Converting validation array to numpy...")
+        self.validation = torch.stack(self.normalize(self.validation))
+        print("[Dataset] Ready")
+
+    @staticmethod
+    def shuffle(arr, seed=math.floor(time.time() % 1000)):
+        nums = np.arange(len(arr))
         np.random.seed(seed)
-        positions = np.arange(len(self.dataset))
-        random.shuffle(positions)
-        self.dataset = self.dataset[positions]
-        self.correct = np.array(self.correct)[positions].tolist()
+        np.random.shuffle(nums)
+        for i in range(len(arr)):
+            if nums[i] != i:
+                arr[i], arr[nums[i]] = arr[nums[i]], arr[i]
+                temp = nums[nums[i]]
+                nums[nums[i]] = nums[i]
+                nums[i] = temp
 
-    def augmentation(self, img):
-        augment = torchvision.transforms.Compose([
-            # torchvision.transforms.RandomCrop(size=10),
-            torchvision.transforms.ColorJitter(brightness=.1, hue=.1, saturation=.1),
-            torchvision.transforms.RandomGrayscale(),
-            torchvision.transforms.RandomHorizontalFlip(),
-            torchvision.transforms.RandomRotation(20)
-        ])
-        return augment(img)
+    def shuffle_train(self, seed=math.floor(time.time() % 1000)):
+        self.shuffle(self.train, seed)
+        self.shuffle(self.train_answers, seed)
+
+    def shuffle_validation(self, seed=math.floor(time.time() % 1000)):
+        self.shuffle(self.validation, seed)
+        self.shuffle(self.validation_answers, seed)
+
+    def shuffle_all(self, seed=math.floor(time.time() % 1000)):
+        self.shuffle_train(seed)
+        self.shuffle_validation(seed)
+
+    @staticmethod
+    def show(img):
+        img.show()
+
+    def normalize(self, imgs):
+        # TODO: Maybe remove loop
+        for i in range(len(imgs)):
+            imgs[i] = self.normalization(imgs[i])
+        return imgs
+
+    def augmentation(self, imgs):
+        # TODO: Maybe remove loop
+        for i in range(len(imgs)):
+            if np.random.randint(0, self.aug_rate) == 0:
+                imgs[i].show()
+                imgs[i] = self.augment(imgs[i])
+                imgs[i].show()
+        return imgs
