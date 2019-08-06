@@ -180,6 +180,7 @@ class Network:
         self.net.load_state_dict(torch.load(path))
 
     def test(self, validation_start, validation_stop, batch_size=500):
+        self.set_eval()
         loss = []
         acc = []
         now = validation_start
@@ -194,6 +195,7 @@ class Network:
 
             loss.append(self.calc_loss(predicts, correct_answers).item())
             acc.append(self.calc_accuracy(predicts, correct_answers))
+        self.set_train()
         return float(np.mean(loss)), float(np.mean(acc))
 
     @staticmethod
