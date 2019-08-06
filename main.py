@@ -14,9 +14,9 @@ bot = telebot.TeleBot(TOKEN)
 torch.cuda.current_device() # DONT REMOVE. It's known torch issue fix
                             # (https://github.com/pytorch/pytorch/issues/21114#issuecomment-508892379)
 net = Network(device="cuda:0")
-net.set_eval()
 model_path = "./model_166.pt"
 net.load_model(model_path)
+net.set_eval()
 data_path = "Images.zip"
 database = ImageDataset(zip_path=data_path, json_path="./breeds_ru.json")
 net.dataset = database
