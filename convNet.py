@@ -20,7 +20,8 @@ class Network:
 
     __version__ = "-1.1.0"
 
-    def __init__(self, dataset=None, learning_rate=0.01, enable_tb=False, device="cpu", weight_decay=0.0002):
+    def __init__(self, dataset=None, learning_rate=0.01, enable_tb=False, device="cpu", weight_decay=0.0002,
+                 output_dims=120):
         self.device = device
         print("Using", self.device)
         self.learning_rate = learning_rate
@@ -39,7 +40,7 @@ class Network:
         for param in self.net.parameters():
             param.requires_grad = False
         self.net.fc = nn.Sequential(
-                                    nn.Linear(2048, 120)
+                                    nn.Linear(2048, output_dims)
                                     # nn.ReLU(),
                                     # nn.Linear(512, 120),
                                     # nn.Softmax(1)

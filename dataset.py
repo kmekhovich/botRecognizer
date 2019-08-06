@@ -26,6 +26,7 @@ class ImageDataset(torch.utils.data.Dataset):
         self.validation = []
         self.validation_answers = []
         self.size = 0
+        self.n_classes = 0
         self.aug_rate = aug_rate
         self.normalization = TT.Compose([
             TT.Resize((pic_size, pic_size)),
@@ -65,6 +66,7 @@ class ImageDataset(torch.utils.data.Dataset):
                     self.size += 1
             if len(buffered_pics) > 0:
                 self.classes.append(buffered_pics.copy())
+        self.n_classes = len(self.classes)
         print("[Dataset] Successfully loaded data with {} classes and size {}".format(len(self.classes), self.size))
 
     def __getitem__(self, index):
