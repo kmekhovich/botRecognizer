@@ -137,7 +137,7 @@ class ImageDataset(torch.utils.data.Dataset):
         # TODO: Maybe remove loop
         for i in range(len(imgs)):
             if np.random.randint(0, self.aug_rate) == 0:
-                imgs[i].show()
+                # imgs[i].show()
                 imgs[i] = self.augment(imgs[i])
-                imgs[i].show()
+                # imgs[i].show()
         return imgs
