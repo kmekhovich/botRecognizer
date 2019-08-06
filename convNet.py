@@ -18,7 +18,7 @@ class Flatten(nn.Module):
 
 class Network:
 
-    __version__ = "-1.1.0"
+    __version__ = "-1.3.-1"
 
     def __init__(self, dataset=None, learning_rate=0.01, enable_tb=False, device="cpu", weight_decay=0.0002,
                  output_dims=120):
@@ -59,9 +59,10 @@ class Network:
         self.optimizer = torch.optim.Adam(self.net.parameters(), self.learning_rate, weight_decay=weight_decay)
 
     def set_train(self):
-        self.net.train()
+        self.net.train(True)
 
     def set_eval(self):
+        self.net.train(False)
         self.net.eval()
 
     def start_ftp(self, host, username, password):
