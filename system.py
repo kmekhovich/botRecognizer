@@ -4,7 +4,7 @@ from urllib.parse import quote
 import requests
 
 
-def printmemory(measure):
+def get_memory_string(measure):
     process = psutil.Process(os.getpid())
     end = {
         0: 'b',
@@ -24,16 +24,14 @@ def manage_downloading(net):
         download(term, path)
 
 
-def download(searchTerm, path):
-    query = "https://ru.wikipedia.org/wiki/{}".format(quote(searchTerm))
-    print(query)
-    searchUrl = requests.get(query).text
+def download(search_term, path):
+    query = "https://ru.wikipedia.org/wiki/{}".format(quote(search_term))
+    search_url = requests.get(query).text
     url = "svg"
     ind = 1
     while "svg" in url:
-        url = "http://{}".format(searchUrl.split('src=\"//')[ind].split("\"")[0])
+        url = "http://{}".format(search_url.split('src=\"//')[ind].split("\"")[0])
         ind += 1
-    print(url)
     with open(path, 'wb') as handle:
         response = requests.get(url, stream=True)
         for block in response.iter_content(1024):
