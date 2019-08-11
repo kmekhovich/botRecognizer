@@ -1,4 +1,5 @@
 import torch
+from Net import Net
 import torch.nn as nn
 from tensorboardcolab import TensorBoardColab
 import numpy as np
@@ -36,15 +37,7 @@ class Network:
         if self.enable_tb:
             self.tb = TensorBoardColab()
 
-        self.net = torchvision.models.resnet50(pretrained=True)
-        for param in self.net.parameters():
-            param.requires_grad = False
-        self.net.fc = nn.Sequential(
-                                    nn.Linear(2048, output_dims)
-                                    # nn.ReLU(),
-                                    # nn.Linear(512, 120),
-                                    # nn.Softmax(1)
-                                    )
+        self.net = Net(output_dims)
 
         if self.device != "cpu":
             torch.cuda.set_device(self.device)
@@ -180,23 +173,24 @@ class Network:
         self.net.load_state_dict(torch.load(path))
 
     def test(self, validation_start, validation_stop, batch_size=500):
-        self.set_eval()
-        loss = []
-        acc = []
-        now = validation_start
-        while now + batch_size < validation_stop:
-            batch_start = now
-            batch_end = now + batch_size
-            now += batch_size
+        with torch.no_grad():
+            self.set_eval()
+            loss = []
+            acc = []
+            now = validation_start
+            while now + batch_size < validation_stop:
+                batch_start = now
+                batch_end = now + batch_size
+                now += batch_size
 
-            inputs = self.send_to_device(self.dataset.validation[batch_start:batch_end])
-            correct_answers = self.send_to_device(self.dataset.validation_answers[batch_start:batch_end])
-            predicts = self.predict(inputs)
+                inputs = self.send_to_device(self.dataset.validation[batch_start:batch_end])
+                correct_answers = self.send_to_device(self.dataset.validation_answers[batch_start:batch_end])
+                predicts = self.predict(inputs)
 
-            loss.append(self.calc_loss(predicts, correct_answers).item())
-            acc.append(self.calc_accuracy(predicts, correct_answers))
-        self.set_train()
-        return float(np.mean(loss)), float(np.mean(acc))
+                loss.append(self.calc_loss(predicts, correct_answers).item())
+                acc.append(self.calc_accuracy(predicts, correct_answers))
+            self.set_train()
+            return float(np.mean(loss)), float(np.mean(acc))
 
     @staticmethod
     def find_max_indexes(arr, n_top):
