@@ -69,12 +69,11 @@ class Network:
         self.ftp.close()
 
     def send_to_device(self, arr):
-        if type(arr) == torch.Tensor and str(arr.device) == self.device:
-            return arr
-        arr_ = torch.FloatTensor(arr)
-        if self.gpu:
-            arr_ = arr_.to(device=self.device)
-        return arr_
+        if type(arr) != torch.Tensor:
+            arr = torch.FloatTensor(arr)
+        if str(arr.device) != self.device:
+            arr = arr.to(self.device)
+        return arr
 
     def predict(self, inputs):
         return self.net(self.send_to_device(inputs))
